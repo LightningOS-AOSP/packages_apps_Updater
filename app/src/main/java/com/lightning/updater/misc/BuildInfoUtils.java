@@ -29,4 +29,8 @@ public final class BuildInfoUtils {
     public static String getBuildVersion() {
         return SystemProperties.get(Constants.PROP_BUILD_VERSION);
     }
+
+    public static String getBuildType() {
+        return SystemProperties.get(Constants.PROP_PACKAGE_TYPE, "");
+    }
 }

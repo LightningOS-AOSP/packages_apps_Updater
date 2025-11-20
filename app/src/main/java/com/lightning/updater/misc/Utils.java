@@ -98,6 +98,7 @@ public class Utils {
         update.setFileSize(object.getLong("size"));
         update.setDownloadUrl(object.getString("download"));
         update.setVersion(object.getString("version"));
+        update.setBuildType(object.optString("buildtype", ""));
         mMaintainer = object.getString("maintainer");
         mBuildType = object.getString("buildtype");
         mForum = object.getString("forum");
