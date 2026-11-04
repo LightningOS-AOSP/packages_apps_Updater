@@ -31,9 +31,9 @@
           {device} - Device name
     -->
     <string name="updater_server_url_gapps" translatable="false">https://raw.githubusercontent.com/LightningOS-AOSP/official_devices/1.1/OTA/device/GAPPS/{device}.json</string>
-    <string name="updater_server_url_core" translatable="false">https://raw.githubusercontent.com/LightningOS-AOSP/official_devices/1.1/OTA/device/CORE/{device}.json</string>
+    <string name="updater_server_url_mini" translatable="false">https://raw.githubusercontent.com/LightningOS-AOSP/official_devices/1.1/MINI/{device}.json</string>
+    <string name="updater_server_url_pico" translatable="false">https://raw.githubusercontent.com/LightningOS-AOSP/official_devices/1.1/PICO/{device}.json</string>
     <string name="updater_server_url_vanilla" translatable="false">https://raw.githubusercontent.com/LightningOS-AOSP/official_devices/1.1/OTA/device/VANILLA/{device}.json</string>
-    <string name="updater_server_url_microg" translatable="false">https://raw.githubusercontent.com/LightningOS-AOSP/official_devices/1.1/OTA/device/MICROG/{device}.json</string>
 
     <string name="verification_failed_notification">Verification failed</string>
     <string name="verifying_download_notification">Verifying update</string>

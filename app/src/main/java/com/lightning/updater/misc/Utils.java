@@ -177,9 +177,11 @@ public class Utils {
             case "GAPPS":
                 serverUrl = context.getString(R.string.updater_server_url_gapps);
                 break;
-            case "CORE":
-                serverUrl = context.getString(R.string.updater_server_url_core);
+            case "MINI":
+                serverUrl = context.getString(R.string.updater_server_url_mini);
                 break;
+            case "PICO":
+                serverUrl = context.getString(R.string.updater_server_url_pico);
             case "VANILLA":
             default:
                 serverUrl = context.getString(R.string.updater_server_url_vanilla);
