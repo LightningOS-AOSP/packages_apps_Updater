@@ -44,7 +44,7 @@
                 android:layout_gravity="right|center"
                 android:layout_marginTop="16dp"
                 android:layout_marginRight="16dp"
-                android:src="@drawable/ic_rising"
+                android:src="@drawable/ic_lightning"
                 android:visibility="visible" />
 
             <RelativeLayout
@@ -65,7 +65,7 @@
                     android:paddingBottom="16dp"
                     android:textColor="?android:attr/textColorPrimary"
                     android:textSize="34sp"
-                    tools:text="RisingOS Revived\n20"/>
+                    tools:text="LightningOS\n20"/>
 
                 <TextView
                     android:id="@+id/header_build_version"
@@ -74,7 +74,7 @@
                     android:layout_below="@id/header_title"
                     android:textColor="?android:attr/textColorPrimary"
                     android:textSize="12sp"
-                    tools:text="Android 15"/>
+                    tools:text="Android 17"/>
 
                 <TextView
                     android:id="@+id/header_build_date"
@@ -194,7 +194,7 @@
         android:padding="46dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <com.rising.updater.RandomMessageTextView
+        <com.lightning.updater.RandomMessageTextView
             android:id="@+id/no_updates_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

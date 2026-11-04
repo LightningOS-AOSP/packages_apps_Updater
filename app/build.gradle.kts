@@ -33,7 +33,7 @@ android {
     compileSdk = 33
 
     defaultConfig {
-        applicationId = "com.rising.updater"
+        applicationId = "com.lightning.updater"
         minSdk = 30
         targetSdk = 33
         versionCode = 1
@@ -81,7 +81,7 @@ android {
             }
         }
     }
-    namespace = "com.rising.updater"
+    namespace = "com.lightning.updater"
 }
 
 dependencies {

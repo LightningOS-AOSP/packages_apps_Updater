@@ -40,23 +40,23 @@ android_app {
     },
 
     required: [
-        "privapp_whitelist_com.rising.updater",
-        "default-permissions_com.rising.updater"
+        "privapp_whitelist_com.lightning.updater",
+        "default-permissions_com.lightning.updater"
     ],
 }
 
 prebuilt_etc {
-    name: "privapp_whitelist_com.rising.updater",
+    name: "privapp_whitelist_com.lightning.updater",
     system_ext_specific: true,
     sub_dir: "permissions",
-    src: "privapp_whitelist_com.rising.updater.xml",
+    src: "privapp_whitelist_com.lightning.updater.xml",
     filename_from_src: true,
 }
 
 prebuilt_etc {
-    name: "default-permissions_com.rising.updater",
+    name: "default-permissions_com.lightning.updater",
     system_ext_specific: true,
     sub_dir: "default-permissions",
-    src: "default-permissions_com.rising.updater.xml",
+    src: "default-permissions_com.lightning.updater.xml",
     filename_from_src: true,
 }

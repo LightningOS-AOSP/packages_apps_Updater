@@ -1,1 +1,1 @@
--keep class com.rising.updater.ui.FlingBehavior { *; }
+-keep class com.lightning.updater.ui.FlingBehavior { *; }
