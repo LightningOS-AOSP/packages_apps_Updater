@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView
+<com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.Material3.CardView.Elevated"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:focusable="true"
@@ -32,7 +33,6 @@
                 android:id="@+id/build_version"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:alpha="0.87"
                 android:drawablePadding="8dp"
                 android:maxLines="1"
                 android:paddingBottom="8sp"
@@ -45,6 +45,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:maxLines="1"
+                android:textColor="?android:attr/textColorSecondary"
                 android:textSize="14sp"
                 tools:text="29 February 2018" />
 
@@ -59,13 +60,15 @@
                     android:visibility="invisible"
                     tools:visibility="visible">
 
-                    <ProgressBar
+                    <com.google.android.material.progressindicator.LinearProgressIndicator
                         android:id="@+id/progress_bar"
-                        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
                         android:layout_width="0dp"
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:paddingTop="4sp"
+                        app:indicatorColor="?attr/colorPrimary"
+                        app:trackColor="?attr/colorSurfaceVariant"
+                        app:trackCornerRadius="2dp"
                         tools:progress="65" />
 
                     <TextView
@@ -74,6 +77,7 @@
                         android:layout_height="wrap_content"
                         android:paddingStart="8dp"
                         android:paddingEnd="8dp"
+                        android:textColor="?android:attr/textColorSecondary"
                         tools:text="65%" />
                 </LinearLayout>
 
@@ -84,6 +88,7 @@
                     android:layout_below="@id/progress"
                     android:ellipsize="marquee"
                     android:singleLine="true"
+                    android:textColor="?android:attr/textColorSecondary"
                     android:visibility="invisible"
                     tools:text="162 of 1.1GB (3 minutes left)"
                     tools:visibility="visible" />
@@ -94,6 +99,7 @@
                     android:layout_height="wrap_content"
                     android:paddingTop="8sp"
                     android:singleLine="true"
+                    android:textColor="?android:attr/textColorSecondary"
                     tools:text="300 MB"
                     tools:visibility="invisible" />
             </RelativeLayout>
@@ -111,13 +117,13 @@
                 android:layout_gravity="end"
                 android:padding="8dp"
                 android:contentDescription="@null" />
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@id/update_action"
-                style="@style/Widget.AppCompat.Button.Borderless.Colored"
+                style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:padding="8dp"
                 tools:text="Pause" />
         </LinearLayout>
     </LinearLayout>
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

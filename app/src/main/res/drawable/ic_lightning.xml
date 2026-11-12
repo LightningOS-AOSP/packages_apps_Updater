@@ -14,7 +14,7 @@
                 M738,182 A442,442 0 0 1 600,1050 L640,978 A375,375 0 0 0 728,242 Z
                 M740,42 L640,522 L874,516 L480,1197 L612,683 L377,690 Z"
             android:fillColor="?android:attr/colorControlNormal"
-            android:strokeColor="#FFFFFF"
+            android:strokeColor="?android:attr/colorBackground"
             android:strokeWidth="1" />
     </group>
 </vector>

@@ -151,23 +151,23 @@
             android:weightSum="2"
             android:orientation="horizontal">
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/refresh"
                 android:drawableStart="@drawable/ic_menu_refresh"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/menu_refresh"
-                style="@style/Widget.AppCompat.Button.Borderless.Colored"/>
+                style="@style/Widget.Material3.Button.TextButton" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/preferences"
                 android:drawableStart="@drawable/ic_menu_preferences"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/menu_preferences"
-                style="@style/Widget.AppCompat.Button.Borderless.Colored"/>
+                style="@style/Widget.Material3.Button.TextButton" />
 
         </LinearLayout>
     </RelativeLayout>

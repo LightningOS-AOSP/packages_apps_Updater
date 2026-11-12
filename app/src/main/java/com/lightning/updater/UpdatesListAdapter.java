@@ -37,7 +37,6 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -51,6 +50,7 @@ import androidx.appcompat.widget.PopupMenu;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 
 import com.lightning.updater.controller.UpdaterController;
@@ -108,7 +108,7 @@ public class UpdatesListAdapter extends RecyclerView.Adapter<UpdatesListAdapter.
         private final TextView mBuildSize;
 
         private final LinearLayout mProgress;
-        private final ProgressBar mProgressBar;
+        private final LinearProgressIndicator mProgressBar;
         private final TextView mProgressText;
         private final TextView mPercentage;
 
