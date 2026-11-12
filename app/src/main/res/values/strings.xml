@@ -176,4 +176,30 @@
     <string name="local_update_import_failure">Failed to import local update</string>
     <string name="local_update_import_install">Install</string>
     <string name="local_update_name">Local update</string>
+
+    <!-- Redesigned main screen -->
+    <string name="updater_up_to_date">You\'re up to date</string>
+    <string name="updater_no_updates">No updates available, try again later.</string>
+    <string name="updater_last_checked_never">Last checked: Never</string>
+    <string name="updater_last_checked_with_time">Last checked: %1$s</string>
+    <string name="updater_checking">Checking for updates\u2026</string>
+    <string name="updater_update_available">Update available</string>
+    <string name="updater_update_available_info">LightningOS <xliff:g id="version" example="1.1">%1$s</xliff:g> · <xliff:g id="size" example="1.1 GB">%2$s</xliff:g></string>
+    <string name="updater_build_details">Build details</string>
+    <string name="updater_label_build_date">Build date</string>
+    <string name="updater_label_device">Device</string>
+    <string name="updater_label_android">Android</string>
+    <string name="updater_label_flavor">Flavor</string>
+    <string name="updater_label_channel">Update channel</string>
+    <string name="updater_label_build_id">Build ID</string>
+    <string name="updater_channel_unofficial">Unofficial · no OTA info</string>
+    <string name="updater_version_line">Version %1$s · %2$s</string>
+    <string name="updater_version_simple">Version %1$s</string>
+    <string name="updater_chip_android">Android %1$s</string>
+    <string name="updater_copy_build_id">Copy build ID</string>
+    <string name="updater_build_id_copied">Build ID copied</string>
+    <string name="updater_btn_check">Check now</string>
+    <string name="updater_btn_local_install">Local install</string>
+    <string name="updater_downloading_percent">Downloading · %1$d%%</string>
+    <string name="updater_paused_percent">Paused · %1$d%%</string>
 </resources>

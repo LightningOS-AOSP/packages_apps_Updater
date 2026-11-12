@@ -19,6 +19,8 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.UiModeManager;
 import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -32,8 +34,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.SystemProperties;
+import android.text.format.Formatter;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -41,12 +43,9 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.Animation;
-import android.view.animation.LinearInterpolator;
-import android.view.animation.RotateAnimation;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -56,31 +55,32 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.SimpleItemAnimator;
 
-import com.google.android.material.appbar.AppBarLayout;
-import com.google.android.material.appbar.CollapsingToolbarLayout;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.progressindicator.CircularProgressIndicator;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 
 import org.json.JSONException;
 import com.lightning.updater.controller.UpdaterController;
 import com.lightning.updater.controller.UpdaterService;
 import com.lightning.updater.download.DownloadClient;
+import com.lightning.updater.misc.BuildInfo;
 import com.lightning.updater.misc.BuildInfoUtils;
 import com.lightning.updater.misc.Constants;
 import com.lightning.updater.misc.StringGenerator;
 import com.lightning.updater.misc.Utils;
 import com.lightning.updater.model.Update;
 import com.lightning.updater.model.UpdateInfo;
+import com.lightning.updater.model.UpdateStatus;
 
 import java.io.File;
 import java.io.IOException;
@@ -96,17 +96,9 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
 
     private UpdatesListAdapter mAdapter;
 
-    private View mRefreshIconView;
-    private RotateAnimation mRefreshAnimation;
-
     private boolean mIsTV;
 
     private UpdateInfo mToBeExported = null;
-
-    private CircularProgressIndicator progressDownload;
-    private CircularProgressIndicator progressLocalUpdate;
-
-    private RandomMessageTextView noUpdatesTextView;
 
     private final ActivityResultLauncher<Intent> mExportUpdate = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -138,6 +130,7 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
         recyclerView.setAdapter(mAdapter);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
+        recyclerView.setNestedScrollingEnabled(false);
         RecyclerView.ItemAnimator animator = recyclerView.getItemAnimator();
         if (animator instanceof SimpleItemAnimator) {
             ((SimpleItemAnimator) animator).setSupportsChangeAnimations(false);
@@ -154,21 +147,17 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
                 } else if (UpdaterController.ACTION_DOWNLOAD_PROGRESS.equals(intent.getAction())) {
                     if (update != null) {
                         mAdapter.notifyItemChanged(downloadId);
-                        updateDownloadProgress(progressDownload, update);
+                        updateStatusProgress(update);
                     }
                 } else if (UpdaterController.ACTION_INSTALL_PROGRESS.equals(intent.getAction())) {
                     if (update != null) {
                         mAdapter.notifyItemChanged(downloadId);
-                        updateInstallProgress(progressLocalUpdate, update);
                     }
                 } else if (UpdaterController.ACTION_UPDATE_REMOVED.equals(intent.getAction())) {
                     mAdapter.removeItem(downloadId);
                     List<UpdateInfo> sortedUpdates =
                             mUpdaterService.getUpdaterController().getUpdates();
-                    if (sortedUpdates.isEmpty()) {
-                        findViewById(R.id.no_new_updates_view).setVisibility(View.VISIBLE);
-                        findViewById(R.id.recycler_view).setVisibility(View.GONE);
-                    }
+                    setUpdatesListVisibility(sortedUpdates.isEmpty());
                 }
             }
         };
@@ -180,99 +169,38 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
             if (actionBar != null) {
                 actionBar.setDisplayShowTitleEnabled(false);
                 actionBar.setDisplayHomeAsUpEnabled(true);
-                final int statusBarHeight;
-                TypedValue tv = new TypedValue();
-                if (getTheme().resolveAttribute(android.R.attr.actionBarSize, tv, true)) {
-                    statusBarHeight = TypedValue.complexToDimensionPixelSize(
-                            tv.data, getResources().getDisplayMetrics());
-                } else {
-                    statusBarHeight = 0;
-                }
-                RelativeLayout headerContainer = findViewById(R.id.header_container);
-                recyclerView.setOnApplyWindowInsetsListener((view, insets) -> {
-                    int top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
-                    CollapsingToolbarLayout.LayoutParams lp =
-                            (CollapsingToolbarLayout.LayoutParams)
-                                    headerContainer.getLayoutParams();
-                    lp.topMargin = top + statusBarHeight;
-                    headerContainer.setLayoutParams(lp);
-                    return insets;
-                });
-            }
-        }
-
-        TextView headerTitle = findViewById(R.id.header_title);
-        headerTitle.setText(getString(R.string.header_title_text,
-                BuildInfoUtils.getBuildVersion()));
-
-        updateLastCheckedString();
-
-        if (!mIsTV) {
-            // Switch between header title and appbar title minimizing overlaps
-            final CollapsingToolbarLayout collapsingToolbar = findViewById(R.id.collapsing_toolbar);
-            final AppBarLayout appBar = findViewById(R.id.app_bar);
-            appBar.addOnOffsetChangedListener(new AppBarLayout.OnOffsetChangedListener() {
-                boolean mIsShown = false;
-
-                @Override
-                public void onOffsetChanged(AppBarLayout appBarLayout, int verticalOffset) {
-                    int scrollRange = appBarLayout.getTotalScrollRange();
-                    if (!mIsShown && scrollRange + verticalOffset < 10) {
-                        collapsingToolbar.setTitle(getString(R.string.display_name));
-                        mIsShown = true;
-                    } else if (mIsShown && scrollRange + verticalOffset > 100) {
-                        collapsingToolbar.setTitle(null);
-                        mIsShown = false;
-                    }
-                }
-            });
-
-            mRefreshAnimation = new RotateAnimation(0, 360, Animation.RELATIVE_TO_SELF, 0.5f,
-                    Animation.RELATIVE_TO_SELF, 0.5f);
-            mRefreshAnimation.setInterpolator(new LinearInterpolator());
-            mRefreshAnimation.setDuration(1000);
-
-            if (!Utils.hasTouchscreen(this)) {
-                // This can't be collapsed without a touchscreen
-                appBar.setExpanded(false);
             }
         } else {
             findViewById(R.id.refresh).setOnClickListener(v -> downloadUpdatesList(true));
             findViewById(R.id.preferences).setOnClickListener(v -> showPreferencesDialog());
+            TextView headerTitle = findViewById(R.id.header_title);
+            headerTitle.setText(getString(R.string.header_title_text,
+                    BuildInfoUtils.getBuildVersion()));
         }
-        noUpdatesTextView = findViewById(R.id.no_updates_text);
-        FloatingActionButton fabRefresh = findViewById(R.id.fab_refresh);
-        fabRefresh.setOnClickListener(view -> {
-            fabRefresh.performHapticFeedback(
-                    HapticFeedbackConstants.VIRTUAL_KEY,
-                    HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
-            );
-            downloadUpdatesList(true);
-            if (noUpdatesTextView != null && noUpdatesTextView.getVisibility() == View.VISIBLE) {
-                noUpdatesTextView.animate()
-                    .alpha(0f)
-                    .setDuration(200)
-                    .withEndAction(() -> {
-                        noUpdatesTextView.updateRandomMessage();
-                        noUpdatesTextView.setAlpha(0f);
-                        noUpdatesTextView.animate()
-                            .alpha(1f)
-                            .setDuration(200)
-                            .start();
-                    })
-                    .start();
-            }
-        });
-        FloatingActionButton fabLocalUpdate = findViewById(R.id.fab_local_update);
-        fabLocalUpdate.setOnClickListener(view -> {
-            fabLocalUpdate.performHapticFeedback(
-                    HapticFeedbackConstants.VIRTUAL_KEY,
-                    HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
-            );
-            mUpdateImporter.openImportPicker();
-        });
-        progressDownload = findViewById(R.id.progress_download);
-        progressLocalUpdate = findViewById(R.id.progress_local_update);
+
+        updateLastCheckedString();
+        bindBuildInfo();
+
+        MaterialButton btnCheck = findViewById(R.id.btn_check);
+        if (btnCheck != null) {
+            btnCheck.setOnClickListener(view -> {
+                btnCheck.performHapticFeedback(
+                        HapticFeedbackConstants.VIRTUAL_KEY,
+                        HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+                );
+                downloadUpdatesList(true);
+            });
+        }
+        MaterialButton btnLocalInstall = findViewById(R.id.btn_local_install);
+        if (btnLocalInstall != null) {
+            btnLocalInstall.setOnClickListener(view -> {
+                btnLocalInstall.performHapticFeedback(
+                        HapticFeedbackConstants.VIRTUAL_KEY,
+                        HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+                );
+                mUpdateImporter.openImportPicker();
+            });
+        }
     }
 
     @Override
@@ -432,21 +360,11 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
                     Snackbar.LENGTH_SHORT);
         }
 
-        List<String> updateIds = new ArrayList<>();
         List<UpdateInfo> sortedUpdates = controller.getUpdates();
-        if (sortedUpdates.isEmpty()) {
-            findViewById(R.id.no_new_updates_view).setVisibility(View.VISIBLE);
-            findViewById(R.id.recycler_view).setVisibility(View.GONE);
-            if (noUpdatesTextView != null) {
-                noUpdatesTextView.setVisibility(View.VISIBLE);
-            }
-        } else {
-            findViewById(R.id.no_new_updates_view).setVisibility(View.GONE);
-            findViewById(R.id.recycler_view).setVisibility(View.VISIBLE);
+        setUpdatesListVisibility(sortedUpdates.isEmpty());
+        if (!sortedUpdates.isEmpty()) {
             sortedUpdates.sort((u1, u2) -> Long.compare(u2.getTimestamp(), u1.getTimestamp()));
-            if (noUpdatesTextView != null) {
-                noUpdatesTextView.setVisibility(View.GONE);
-            }
+            List<String> updateIds = new ArrayList<>();
             for (UpdateInfo update : sortedUpdates) {
                 updateIds.add(update.getDownloadId());
             }
@@ -542,102 +460,258 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
     private void updateLastCheckedString() {
         final SharedPreferences preferences =
                 PreferenceManager.getDefaultSharedPreferences(this);
-        long lastCheck = preferences.getLong(Constants.PREF_LAST_UPDATE_CHECK, -1) / 1000;
-        String lastCheckString = getString(R.string.header_last_updates_check,
-                StringGenerator.getDateLocalized(this, DateFormat.LONG, lastCheck),
-                StringGenerator.getTimeLocalized(this, lastCheck));
-        TextView headerLastCheck = findViewById(R.id.header_last_check);
-        headerLastCheck.setText(lastCheckString);
+        long lastCheckMillis = preferences.getLong(Constants.PREF_LAST_UPDATE_CHECK, 0);
 
-        TextView headerBuildVersion = findViewById(R.id.header_build_version);
-        headerBuildVersion.setText(
-                getString(R.string.header_android_version, Build.VERSION.RELEASE));
+        if (mIsTV) {
+            long lastCheck = lastCheckMillis / 1000;
+            String lastCheckString = getString(R.string.header_last_updates_check,
+                    StringGenerator.getDateLocalized(this, DateFormat.LONG, lastCheck),
+                    StringGenerator.getTimeLocalized(this, lastCheck));
+            TextView headerLastCheck = findViewById(R.id.header_last_check);
+            headerLastCheck.setText(lastCheckString);
 
-        TextView headerBuildDate = findViewById(R.id.header_build_date);
-        headerBuildDate.setText(getString(R.string.current_build_date, StringGenerator.getDateLocalizedUTC(this,
-                DateFormat.LONG, BuildInfoUtils.getBuildDateTimestamp())));
+            TextView headerBuildVersion = findViewById(R.id.header_build_version);
+            headerBuildVersion.setText(
+                    getString(R.string.header_android_version, Build.VERSION.RELEASE));
 
-        TextView headerBuildType = findViewById(R.id.header_build_type);
+            TextView headerBuildDate = findViewById(R.id.header_build_date);
+            headerBuildDate.setText(getString(R.string.current_build_date,
+                    StringGenerator.getDateLocalizedUTC(this,
+                            DateFormat.LONG, BuildInfoUtils.getBuildDateTimestamp())));
+
+            TextView headerBuildType = findViewById(R.id.header_build_type);
+            String buildType = Utils.getBuildType();
+            headerBuildType.setText(buildType == null || buildType.isEmpty()
+                    ? getString(R.string.build_type_unknown)
+                    : getString(R.string.current_build_type, buildType));
+        } else {
+            TextView lastChecked = findViewById(R.id.last_checked);
+            if (lastChecked != null) {
+                if (lastCheckMillis <= 0) {
+                    // No check has ever happened: never show the Unix epoch
+                    lastChecked.setText(R.string.updater_last_checked_never);
+                } else {
+                    long lastCheck = lastCheckMillis / 1000;
+                    String when = StringGenerator.getDateLocalized(this,
+                            DateFormat.LONG, lastCheck)
+                            + " " + StringGenerator.getTimeLocalized(this, lastCheck);
+                    lastChecked.setText(getString(R.string.updater_last_checked_with_time, when));
+                }
+            }
+        }
+
+        // Hide the support section when there is no OTA info at all
         String buildType = Utils.getBuildType();
-        if (buildType == null || buildType.isEmpty()) {
-            headerBuildType.setText(getString(R.string.build_type_unknown));
-            LinearLayout supportLayout=(LinearLayout)this.findViewById(R.id.support_icons);
-            supportLayout.setVisibility(LinearLayout.GONE);
-        } else {
-            headerBuildType.setText(getString(R.string.current_build_type, buildType));
+        View supportLayout = findViewById(R.id.support_icons);
+        if (supportLayout != null) {
+            supportLayout.setVisibility(
+                    buildType == null || buildType.isEmpty() ? View.GONE : View.VISIBLE);
         }
 
-        TextView MaintainerName = findViewById(R.id.maintainer_name);
+        TextView maintainerName = findViewById(R.id.maintainer_name);
         String maintainer = Utils.getMaintainer();
-        if (maintainer == null || maintainer.isEmpty()) {
-            MaintainerName.setVisibility(View.GONE);
-        } else {
-            MaintainerName.setText(
-                    getString(R.string.maintainer_name, maintainer));
-            MaintainerName.setVisibility(View.VISIBLE);
+        if (maintainerName != null) {
+            if (maintainer == null || maintainer.isEmpty()) {
+                maintainerName.setVisibility(View.GONE);
+            } else {
+                maintainerName.setText(getString(R.string.maintainer_name, maintainer));
+                maintainerName.setVisibility(View.VISIBLE);
+            }
         }
 
-        ImageView forumImage = findViewById(R.id.support_forum);
-        String forum = Utils.getForum();
-        forumImage.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
+        setupSupportLinks();
+    }
+
+    private void setupSupportLinks() {
+        openSupportLink(R.id.support_forum, Utils.getForum());
+        openSupportLink(R.id.support_telegram, Utils.getTelegram());
+        openSupportLink(R.id.support_recovery, Utils.getRecovery());
+        openSupportLink(R.id.support_paypal, Utils.getPaypal());
+    }
+
+    private void openSupportLink(int viewId, String url) {
+        View link = findViewById(viewId);
+        if (link == null) {
+            return;
+        }
+        if (url == null || url.isEmpty()) {
+            link.setVisibility(View.GONE);
+        } else {
+            link.setVisibility(View.VISIBLE);
+            link.setOnClickListener(v -> {
                 Intent intent = new Intent();
                 intent.setAction(Intent.ACTION_VIEW);
                 intent.addCategory(Intent.CATEGORY_BROWSABLE);
-                intent.setData(Uri.parse(forum));
+                intent.setData(Uri.parse(url));
                 startActivity(intent);
+            });
+        }
+    }
+
+    private void bindBuildInfo() {
+        if (mIsTV) {
+            return;
+        }
+        String buildId = BuildInfoUtils.getBuildVersion();
+        BuildInfo info = BuildInfo.fromSystem();
+        TextView romName = findViewById(R.id.rom_name);
+        TextView romVersion = findViewById(R.id.rom_version);
+        ChipGroup chips = findViewById(R.id.hero_chips);
+        LinearLayout rows = findViewById(R.id.details_rows);
+        TextView buildIdValue = findViewById(R.id.build_id_value);
+        if (romName == null || romVersion == null || chips == null || rows == null
+                || buildIdValue == null) {
+            return;
+        }
+
+        chips.removeAllViews();
+        rows.removeAllViews();
+        buildIdValue.setText(buildId);
+
+        romName.setText(info.rom);
+        if (!info.version.isEmpty() && !info.codename.isEmpty()) {
+            romVersion.setText(getString(R.string.updater_version_line,
+                    info.version, info.codename));
+        } else if (!info.version.isEmpty()) {
+            romVersion.setText(getString(R.string.updater_version_simple, info.version));
+        } else if (info.android != null && !info.android.isEmpty()) {
+            romVersion.setText(getString(R.string.header_android_version, info.android));
+        } else {
+            romVersion.setText("");
+        }
+
+        if (info.android != null && !info.android.isEmpty()) {
+            addChip(chips, getString(R.string.updater_chip_android, info.androidShort()));
+        }
+        if (info.flavor != null && !info.flavor.isEmpty()) {
+            addChip(chips, info.flavor);
+        }
+        String typeDisplay = info.typeDisplay();
+        if (!typeDisplay.isEmpty()) {
+            addChip(chips, typeDisplay);
+        }
+
+        String buildDate = info.buildDateDisplay(
+                getResources().getConfiguration().getLocales().get(0));
+        if (!buildDate.isEmpty()) {
+            addRow(rows, R.string.updater_label_build_date, buildDate);
+        }
+        if (info.device != null && !info.device.isEmpty()) {
+            addRow(rows, R.string.updater_label_device, info.device);
+        }
+        if (info.android != null && !info.android.isEmpty()) {
+            addRow(rows, R.string.updater_label_android, info.android);
+        }
+        if (info.flavor != null && !info.flavor.isEmpty()) {
+            addRow(rows, R.string.updater_label_flavor, info.flavor);
+        }
+        addRow(rows, R.string.updater_label_channel,
+                info.hasOtaInfo() ? typeDisplay
+                        : getString(R.string.updater_channel_unofficial));
+
+        View copyButton = findViewById(R.id.build_id_copy);
+        if (copyButton != null) {
+            copyButton.setOnClickListener(v -> {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(
+                        Context.CLIPBOARD_SERVICE);
+                clipboard.setPrimaryClip(ClipData.newPlainText(
+                        getString(R.string.updater_label_build_id), buildId));
+                showSnackbar(R.string.updater_build_id_copied, Snackbar.LENGTH_SHORT);
+            });
+        }
+    }
+
+    private void addChip(ChipGroup group, String text) {
+        Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_updater_chip, group, false);
+        chip.setText(text);
+        group.addView(chip);
+    }
+
+    private void addRow(LinearLayout container, int labelRes, String value) {
+        View row = getLayoutInflater().inflate(R.layout.item_updater_detail_row, container, false);
+        ((TextView) row.findViewById(R.id.detail_label)).setText(labelRes);
+        ((TextView) row.findViewById(R.id.detail_value)).setText(value);
+        container.addView(row);
+    }
+
+    private void setUpdatesListVisibility(boolean empty) {
+        View recyclerView = findViewById(R.id.recycler_view);
+        if (recyclerView != null) {
+            recyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
+        }
+        if (mIsTV) {
+            View emptyView = findViewById(R.id.no_new_updates_view);
+            if (emptyView != null) {
+                emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
+            }
+        } else {
+            renderStatusCard();
+        }
+    }
+
+    private void renderStatusCard() {
+        if (mIsTV) {
+            return;
+        }
+        FrameLayout badge = findViewById(R.id.status_badge);
+        ImageView icon = findViewById(R.id.status_icon);
+        TextView title = findViewById(R.id.status_title);
+        TextView message = findViewById(R.id.status_message);
+        if (badge == null || icon == null || title == null || message == null) {
+            return;
+        }
+
+        boolean hasUpdates = mAdapter != null && mAdapter.getItemCount() > 0;
+        if (hasUpdates) {
+            badge.setBackgroundResource(R.drawable.bg_updater_badge);
+            icon.setImageResource(R.drawable.ic_updater_install_primary);
+            title.setText(R.string.updater_update_available);
+
+            UpdateInfo newest = null;
+            if (mUpdaterService != null) {
+                for (UpdateInfo update : mUpdaterService.getUpdaterController().getUpdates()) {
+                    if (newest == null || update.getTimestamp() > newest.getTimestamp()) {
+                        newest = update;
+                    }
                 }
-            });
-
-        ImageView telegramImage = findViewById(R.id.support_telegram);
-        String telegram = Utils.getTelegram();
-        if (telegram == null || telegram.isEmpty()) {
-            telegramImage.setVisibility(View.GONE);
+            }
+            if (newest != null) {
+                message.setText(getString(R.string.updater_update_available_info,
+                        newest.getVersion(),
+                        Formatter.formatShortFileSize(this, newest.getFileSize())));
+                message.setVisibility(View.VISIBLE);
+            } else {
+                message.setVisibility(View.GONE);
+            }
         } else {
-            telegramImage.setVisibility(View.VISIBLE);
-            telegramImage.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    Intent intent = new Intent();
-                    intent.setAction(Intent.ACTION_VIEW);
-                    intent.addCategory(Intent.CATEGORY_BROWSABLE);
-                    intent.setData(Uri.parse(telegram));
-                    startActivity(intent);
-                    }
-            });
+            badge.setBackgroundResource(R.drawable.bg_updater_badge_done);
+            icon.setImageResource(R.drawable.ic_updater_check);
+            title.setText(R.string.updater_up_to_date);
+            message.setText(R.string.updater_no_updates);
+            message.setVisibility(View.VISIBLE);
         }
+    }
 
-        ImageView recoveryImage = findViewById(R.id.support_recovery);
-        String recovery = Utils.getRecovery();
-        if (recovery == null || recovery.isEmpty()) {
-            recoveryImage.setVisibility(View.GONE);
-        } else {
-            recoveryImage.setVisibility(View.VISIBLE);
-            recoveryImage.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    Intent intent = new Intent();
-                    intent.setAction(Intent.ACTION_VIEW);
-                    intent.addCategory(Intent.CATEGORY_BROWSABLE);
-                    intent.setData(Uri.parse(recovery));
-                    startActivity(intent);
-                    }
-            });
+    private void updateStatusProgress(UpdateInfo update) {
+        if (mIsTV) {
+            return;
         }
-
-        ImageView paypalImage = findViewById(R.id.support_paypal);
-        String paypal = Utils.getPaypal();
-        if (paypal == null || recovery.isEmpty()) {
-            paypalImage.setVisibility(View.GONE);
+        View progressBlock = findViewById(R.id.progress_block);
+        LinearProgressIndicator progress = findViewById(R.id.download_progress);
+        TextView label = findViewById(R.id.progress_label);
+        if (progressBlock == null || progress == null || label == null) {
+            return;
+        }
+        UpdateStatus status = update.getStatus();
+        if (status == UpdateStatus.DOWNLOADING || status == UpdateStatus.PAUSED) {
+            progressBlock.setVisibility(View.VISIBLE);
+            int percent = update.getProgress();
+            progress.setProgressCompat(percent, true);
+            label.setText(getString(status == UpdateStatus.DOWNLOADING
+                    ? R.string.updater_downloading_percent
+                    : R.string.updater_paused_percent, percent));
         } else {
-            paypalImage.setVisibility(View.VISIBLE);
-            paypalImage.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    Intent intent = new Intent();
-                    intent.setAction(Intent.ACTION_VIEW);
-                    intent.addCategory(Intent.CATEGORY_BROWSABLE);
-                    intent.setData(Uri.parse(paypal));
-                    startActivity(intent);
-                    }
-            });
+            progressBlock.setVisibility(View.GONE);
         }
     }
 
@@ -691,14 +765,12 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
     @Override
     public void showSnackbar(int stringId, int duration) {
         Snackbar snackbar = Snackbar.make(findViewById(R.id.main_container), stringId, duration);
-        snackbar.setAnchorView(R.id.fab_refresh);
+        snackbar.setAnchorView(mIsTV ? R.id.refresh : R.id.action_bar);
         View snackbarView = snackbar.getView();
-        snackbarView.setBackgroundTintList(getColorStateList(R.color.snackbar_background));
         snackbarView.setElevation(6f);
         snackbarView.setBackground(getDrawable(R.drawable.snackbar_background));
         TextView textView = snackbarView.findViewById(com.google.android.material.R.id.snackbar_text);
         textView.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
-        textView.setTextColor(getResources().getColor(android.R.color.white));
         ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) snackbarView.getLayoutParams();
         params.bottomMargin += getResources().getDimensionPixelSize(R.dimen.snackbar_spacing);
         params.leftMargin += getResources().getDimensionPixelSize(R.dimen.snackbar_horizontal_margin);
@@ -709,13 +781,29 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
 
     private void refreshAnimationStart() {
         if (!mIsTV) {
-            if (mRefreshIconView == null) {
-                mRefreshIconView = findViewById(R.id.fab_refresh);
+            View spinner = findViewById(R.id.status_spinner);
+            View statusIcon = findViewById(R.id.status_icon);
+            FrameLayout statusBadge = findViewById(R.id.status_badge);
+            TextView statusTitle = findViewById(R.id.status_title);
+            MaterialButton btnCheck = findViewById(R.id.btn_check);
+            MaterialButton btnLocalInstall = findViewById(R.id.btn_local_install);
+            if (spinner != null) {
+                spinner.setVisibility(View.VISIBLE);
             }
-            if (mRefreshIconView != null) {
-                mRefreshAnimation.setRepeatCount(Animation.INFINITE);
-                mRefreshIconView.startAnimation(mRefreshAnimation);
-                mRefreshIconView.setEnabled(false);
+            if (statusIcon != null) {
+                statusIcon.setVisibility(View.INVISIBLE);
+            }
+            if (statusBadge != null) {
+                statusBadge.setBackgroundResource(R.drawable.bg_updater_badge_checking);
+            }
+            if (statusTitle != null) {
+                statusTitle.setText(R.string.updater_checking);
+            }
+            if (btnCheck != null) {
+                btnCheck.setEnabled(false);
+            }
+            if (btnLocalInstall != null) {
+                btnLocalInstall.setEnabled(false);
             }
         } else {
             findViewById(R.id.recycler_view).setVisibility(View.GONE);
@@ -726,10 +814,23 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
 
     private void refreshAnimationStop() {
         if (!mIsTV) {
-            if (mRefreshIconView != null) {
-                mRefreshAnimation.setRepeatCount(0);
-                mRefreshIconView.setEnabled(true);
+            View spinner = findViewById(R.id.status_spinner);
+            View statusIcon = findViewById(R.id.status_icon);
+            MaterialButton btnCheck = findViewById(R.id.btn_check);
+            MaterialButton btnLocalInstall = findViewById(R.id.btn_local_install);
+            if (spinner != null) {
+                spinner.setVisibility(View.GONE);
             }
+            if (statusIcon != null) {
+                statusIcon.setVisibility(View.VISIBLE);
+            }
+            if (btnCheck != null) {
+                btnCheck.setEnabled(true);
+            }
+            if (btnLocalInstall != null) {
+                btnLocalInstall.setEnabled(true);
+            }
+            renderStatusCard();
         } else {
             findViewById(R.id.refresh_progress).setVisibility(View.GONE);
             if (mAdapter.getItemCount() > 0) {
@@ -740,38 +841,10 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
         }
     }
 
-    private void updateDownloadProgress(CircularProgressIndicator progressDownload, UpdateInfo update) {
-        int progress = update.getProgress();
-        runOnUiThread(() -> {
-            if (progressDownload.getVisibility() != View.VISIBLE) {
-                progressDownload.setVisibility(View.VISIBLE);
-            }
-            progressDownload.setProgressCompat(progress, true);
-            if (progress == 100) {
-                progressDownload.setVisibility(View.GONE);
-            }
-        });
-    }
-
-    private void updateInstallProgress(CircularProgressIndicator progressLocalUpdate, UpdateInfo update) {
-        int progress = update.getInstallProgress();
-        runOnUiThread(() -> {
-            if (progressLocalUpdate.getVisibility() != View.VISIBLE) {
-                progressLocalUpdate.setVisibility(View.VISIBLE);
-            }
-            progressLocalUpdate.setProgressCompat(progress, true);
-            if (progress == 100) {
-                progressLocalUpdate.setVisibility(View.GONE);
-            }
-        });
-    }
-
     private void hideProgressBars() {
-        if (progressDownload != null) {
-            progressDownload.setVisibility(View.GONE);
-        }
-        if (progressLocalUpdate != null) {
-            progressLocalUpdate.setVisibility(View.GONE);
+        View progressBlock = findViewById(R.id.progress_block);
+        if (progressBlock != null) {
+            progressBlock.setVisibility(View.GONE);
         }
     }
 
@@ -779,11 +852,11 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
     private void showPreferencesDialog() {
         View view = LayoutInflater.from(this).inflate(R.layout.preferences_dialog, null);
         Spinner autoCheckInterval = view.findViewById(R.id.preferences_auto_updates_check_interval);
-        SwitchCompat autoDelete = view.findViewById(R.id.preferences_auto_delete_updates);
-        SwitchCompat meteredNetworkWarning = view.findViewById(
+        MaterialSwitch autoDelete = view.findViewById(R.id.preferences_auto_delete_updates);
+        MaterialSwitch meteredNetworkWarning = view.findViewById(
                 R.id.preferences_metered_network_warning);
-        SwitchCompat abPerfMode = view.findViewById(R.id.preferences_ab_perf_mode);
-        SwitchCompat updateRecovery = view.findViewById(R.id.preferences_update_recovery);
+        MaterialSwitch abPerfMode = view.findViewById(R.id.preferences_ab_perf_mode);
+        MaterialSwitch updateRecovery = view.findViewById(R.id.preferences_update_recovery);
 
         if (!Utils.isABDevice()) {
             abPerfMode.setVisibility(View.GONE);
